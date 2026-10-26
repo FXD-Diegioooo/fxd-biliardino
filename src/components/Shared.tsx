@@ -1,0 +1,35 @@
+import { useEffect, useId, useRef } from 'react';
+import { ArrowUpRight, Crown, Flag, X } from 'lucide-react';
+import { supabase } from '../lib/supabase';
+import { italyDate, roleLabel, winner } from '../lib/domain';
+import type { Match, Player } from '../lib/domain';
+export function Avatar({ player, size = 'md' }: { player?: Player; size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' }) {
+  const colors = ['mint', 'peach', 'lilac', 'butter', 'sky'];
+  const hash = (player?.id || '').split('').reduce((v, c) => v + c.charCodeAt(0), 0);
+  const initials = (player?.full_name || '?').split(' ').filter(Boolean).slice(0, 2).map(n => n[0]).join('');
+  const url = player?.avatar_path?.startsWith('data:') ? player.avatar_path : player?.avatar_path && supabase ? supabase.storage.from('avatars').getPublicUrl(player.avatar_path).data.publicUrl : null;
+  return <span className={`avatar ${size} ${colors[hash % colors.length]}`} aria-hidden="true">{url ? <img src={url} alt="" onError={e => { e.currentTarget.style.display = 'none'; }} /> : null}<span>{initials}</span></span>;
+}
+export function Brand() { return <span className="brand"><span className="brand-mark">f<span>•</span></span>fuoricampo<span className="brand-dot">®</span></span>; }
+export function Modal({ title, children, onClose, wide = false }: { title: string; children: React.ReactNode; onClose: () => void; wide?: boolean }) {
+  const ref = useRef<HTMLDialogElement>(null), id = useId();
+  useEffect(() => { const d = ref.current!; d.showModal(); const previous = document.body.style.overflow; document.body.style.overflow = 'hidden'; return () => { d.close(); document.body.style.overflow = previous; }; }, []);
+  return <dialog ref={ref} aria-labelledby={id} className={`modal ${wide ? 'wide' : ''}`} onCancel={e => { e.preventDefault(); onClose(); }} onClick={e => { if (e.target === e.currentTarget) { const r = e.currentTarget.getBoundingClientRect(); if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) onClose(); } }}><header className="modal-head"><h2 id={id}>{title}</h2><button type="button" className="icon-button" onClick={onClose} aria-label="Chiudi"><X size={21} /></button></header>{children}</dialog>;
+}
+export function Empty({ title, text }: { title: string; text: string }) { return <div className="empty"><span className="empty-ball">⚽</span><h3>{title}</h3><p>{text}</p></div>; }
+export function MatchCard({ match, players, onClick }: { match: Match; players: Player[]; onClick: () => void }) {
+  const names = (side: 'red' | 'blue') => match.participants.filter(p => p.side === side).map(p => players.find(x => x.id === p.player_id)?.full_name.split(' ')[0] || 'Giocatore').join(' & ');
+  const win = winner(match);
+  const mvp = players.find(p => p.id === match.mvp_id);
+  return <button className="match-card" onClick={onClick}><span className="match-meta"><span>{italyDate(match.created_at, { day: 'numeric', month: 'short' })}<span className="meta-dot">·</span>{italyDate(match.created_at, { hour: '2-digit', minute: '2-digit' })}</span><span>{match.participants.length === 4 ? '2 vs 2' : '1 vs 1'}<ArrowUpRight size={15} /></span></span><span className="match-scoreline"><span className={`team-name red ${win === 'red' ? 'won' : ''}`}><i />{names('red')}</span><span className="score"><b className={win === 'red' ? 'winning' : ''}>{match.red_score}</b><span>:</span><b className={win === 'blue' ? 'winning' : ''}>{match.blue_score}</b></span><span className={`team-name blue ${win === 'blue' ? 'won' : ''}`}>{names('blue')}<i /></span></span>{mvp && <span className="match-mvp"><Crown size={13} /> MVP · {mvp.full_name}</span>}</button>;
+}
+export function MatchDetail({ match, players, onClose, onReport }: { match: Match; players: Player[]; onClose: () => void; onReport: (match: Match, reason: string) => Promise<void> }) {
+  return <MatchDetailInner match={match} players={players} onClose={onClose} onReport={onReport} />;
+}
+import { useState } from 'react';
+function MatchDetailInner({ match, players, onClose, onReport }: { match: Match; players: Player[]; onClose: () => void; onReport: (match: Match, reason: string) => Promise<void> }) {
+  const [reporting, setReporting] = useState(false), [reason, setReason] = useState(''), [busy, setBusy] = useState(false), [error, setError] = useState(''), [sent, setSent] = useState(false);
+  const mvp = players.find(p => p.id === match.mvp_id), author = players.find(p => p.id === match.added_by);
+  async function send(e: React.FormEvent) { e.preventDefault(); setBusy(true); setError(''); try { await onReport(match, reason); setSent(true); } catch (e) { setError(e instanceof Error ? e.message : 'Invio non riuscito. Riprova.'); } finally { setBusy(false); } }
+  return <Modal title="La partita, nel dettaglio" onClose={() => !busy && onClose()}><p className="subtle detail-date">{italyDate(match.created_at, { dateStyle: 'long', timeStyle: 'short' })} · {match.participants.length === 4 ? '2 contro 2' : '1 contro 1'}</p><div className="detail-score"><span className="pill red">Rossi</span><strong>{match.red_score} <span>:</span> {match.blue_score}</strong><span className="pill blue">Blu</span></div><div className="victory-label">Vince la squadra {winner(match) === 'red' ? 'rossa' : 'blu'} 🎉</div><div className="detail-teams">{(['red', 'blue'] as const).map(side => <section className={`detail-team ${side}`} key={side}><h3><i />Squadra {side === 'red' ? 'rossa' : 'blu'}</h3>{match.participants.filter(p => p.side === side).map(p => { const player = players.find(x => x.id === p.player_id); return <div className="person-line" key={p.player_id}><Avatar player={player} size="sm" /><div><strong>{player?.full_name || 'Giocatore rimosso'}</strong><small>{roleLabel(p.role)}</small></div>{match.mvp_id === p.player_id && <Crown size={18} className="gold" />}</div>; })}</section>)}</div>{mvp && <div className="mvp-highlight"><Crown size={23} /><div><small>IL MIGLIORE IN CAMPO</small><strong>{mvp.full_name}</strong></div><b>+5 pt</b></div>}<p className="detail-foot">Inserita da {author?.full_name || 'Giocatore rimosso'}<br />{italyDate(match.created_at, { dateStyle: 'long', timeStyle: 'short' })}</p><div className="report-area">{sent ? <p role="status" className="success">Segnalazione registrata. Grazie per averci avvisato.</p> : reporting ? <form onSubmit={send}><label htmlFor="report-reason">Cosa non torna?</label><textarea id="report-reason" required minLength={5} maxLength={1000} value={reason} onChange={e => setReason(e.target.value)} placeholder="Descrivi il problema con questa partita…" /><p className="subtle">La segnalazione sarà visibile all’amministratore del club.</p>{error && <p className="error" role="alert">{error}</p>}<button className="button primary full" disabled={busy}>{busy ? 'Invio in corso…' : 'Invia segnalazione'}</button></form> : <button className="text-button muted" onClick={() => setReporting(true)}><Flag size={15} /> Segnala partita</button>}</div></Modal>;
+}
