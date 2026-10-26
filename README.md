@@ -92,7 +92,7 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
-10 test di dominio e 8 test di interfaccia su desktop e mobile. Per usare un Chromium già installato, imposta `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH`.
+13 test di dominio e 18 test di interfaccia su desktop e mobile. Per usare un Chromium già installato, imposta `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH`.
 
 `supabase/tests/club.sql` verifica sul vero PostgreSQL signup, permessi, inserimento atomico, idempotenza, ruoli, MVP, segnalazioni, limite orario e revoca accesso alla rimozione account. Va eseguito come `postgres` nel SQL Editor: usa dati di test con UUID casuali e termina con `ROLLBACK`, senza lasciare account, partite o segnalazioni di prova. È stato eseguito con esito positivo sul progetto remoto.
 
@@ -104,3 +104,13 @@ npm run test:e2e
 - `src/styles.css`: stile responsive ispirato agli screenshot in `Esempio UI/`.
 
 Il caricamento usa pagine da 500 righe per evitare il limite predefinito di Supabase; i calcoli sono nel client. Per un club aziendale è un punto di partenza semplice. Per volumi elevati conviene spostare aggregazioni e ricerca sul database.
+
+## Aggiornamento profili, tema e icone (26 ottobre 2026)
+
+La migrazione `202610260002_profile_customization.sql` è già applicata al progetto remoto. Aggiunge sei colori di banner e l'indice univoco sui nomi degli account attivi. I nomi vengono confrontati ignorando maiuscole, spazi superflui e forme Unicode equivalenti; la protezione vale anche nei cambi di nome e nelle richieste concorrenti. Gli account rimossi non riservano un nome. Le email continuano a essere gestite e rese univoche da Supabase Auth, con messaggi di errore più chiari nell'app.
+
+`supabase/tests/profile_customization.sql` verifica i nuovi vincoli, la disponibilità del nome, il salvataggio dei banner e i permessi. È stato eseguito con successo sul database remoto e termina con `ROLLBACK`.
+
+Il tema segue il dispositivo finché non si usa il pulsante sole/luna; la scelta manuale è ricordata nel browser. La corona del profilo segnala il primo classificato in almeno una classifica corrente fra punti/forza e mese/anno, ed è assente quando non ci sono partite nel periodo.
+
+Le icone includono SVG/ICO per il browser, PNG 180 per iOS e PNG 192/512 con manifest per Android e collegamenti alla home. `scripts/generate_icons.py` rigenera i PNG a partire dalla geometria del marchio (richiede Pillow). La configurazione Vercel esclude i file statici dalla riscrittura SPA, così manifest, icone e script del tema vengono serviti direttamente. Nessun service worker o comportamento offline viene aggiunto. Per un collegamento alla home già esistente può essere necessario rimuoverlo e aggiungerlo nuovamente per aggiornare l'icona memorizzata dal telefono.

@@ -1,7 +1,7 @@
 import type { Match, Player } from './domain';
 export const demoPlayers: Player[] = [
   ['diego', 'Diego Cogliati', 'attack'], ['giulia', 'Giulia Rossi', 'defense'], ['marco', 'Marco Bianchi', 'attack'], ['sara', 'Sara Ferrari', 'defense'], ['luca', 'Luca Colombo', 'attack'], ['ale', 'Alessandro Riva', 'defense'], ['francesca', 'Francesca Villa', 'attack'], ['matteo', 'Matteo Galli', 'defense']
-].map(([id, full_name, preferred_role]) => ({ id, auth_user_id: id, full_name, preferred_role: preferred_role as Player['preferred_role'], avatar_path: null }));
+].map(([id, full_name, preferred_role]) => ({ id, auth_user_id: id, full_name, preferred_role: preferred_role as Player['preferred_role'], avatar_path: null, banner_color: 'blue' }));
 export function makeDemoMatches(): Match[] {
   const result: Match[] = [];
   for (let i = 0; i < 32; i++) {

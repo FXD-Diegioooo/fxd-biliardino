@@ -1,8 +1,9 @@
+import type { BannerColor } from './profile';
 export type Role = 'attack' | 'defense';
 export type Side = 'red' | 'blue';
 export type Period = 'month' | 'year';
 export type RankingMode = 'points' | 'strength';
-export interface Player { id: string; auth_user_id: string | null; full_name: string; preferred_role: Role; avatar_path: string | null; }
+export interface Player { id: string; auth_user_id: string | null; full_name: string; preferred_role: Role; avatar_path: string | null; banner_color: BannerColor; }
 export interface Participant { player_id: string; side: Side; role: Role | 'single'; }
 export interface Match { id: string; created_at: string; added_by: string | null; red_score: number; blue_score: number; mvp_id: string | null; participants: Participant[]; }
 export interface MatchInput { request_id: string; red_score: number; blue_score: number; mvp_id: string | null; participants: Participant[]; }

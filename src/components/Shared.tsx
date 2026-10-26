@@ -10,7 +10,7 @@ export function Avatar({ player, size = 'md' }: { player?: Player; size?: 'xs' |
   const url = player?.avatar_path?.startsWith('data:') ? player.avatar_path : player?.avatar_path && supabase ? supabase.storage.from('avatars').getPublicUrl(player.avatar_path).data.publicUrl : null;
   return <span className={`avatar ${size} ${colors[hash % colors.length]}`} aria-hidden="true">{url ? <img src={url} alt="" onError={e => { e.currentTarget.style.display = 'none'; }} /> : null}<span>{initials}</span></span>;
 }
-export function Brand() { return <span className="brand"><span className="brand-mark">f<span>•</span></span>fuoricampo<span className="brand-dot">®</span></span>; }
+export function Brand() { return <span className="brand"><img className="brand-mark" src="/favicon.svg" alt="" width="35" height="36" />fuoricampo<span className="brand-dot">®</span></span>; }
 export function Modal({ title, children, onClose, wide = false }: { title: string; children: React.ReactNode; onClose: () => void; wide?: boolean }) {
   const ref = useRef<HTMLDialogElement>(null), id = useId();
   useEffect(() => { const d = ref.current!; d.showModal(); const previous = document.body.style.overflow; document.body.style.overflow = 'hidden'; return () => { d.close(); document.body.style.overflow = previous; }; }, []);
