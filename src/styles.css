@@ -51,3 +51,19 @@
 @media(max-width:620px){.auth-theme-toggle{right:23px;top:22px}.header-actions{gap:9px}.theme-toggle{width:32px;height:32px}.edit-avatar>.profile-cover{margin-left:-10px;margin-right:-10px;width:calc(100% + 20px)}}
 
 .mobile-add>span:first-child{background:var(--action)}
+
+/* Native-style refresh is handled only on coarse-pointer mobile viewports. */
+html.pull-refresh-enabled,html.pull-refresh-enabled body{overscroll-behavior-y:none}
+.pull-refresh-indicator{position:fixed;top:calc(env(safe-area-inset-top,0px) + 10px);left:50%;display:flex;align-items:center;gap:9px;padding:11px 16px;border:1px solid var(--line);border-radius:99px;background:var(--surface);color:var(--blue);box-shadow:0 5px 22px #00000018;z-index:30;opacity:0;pointer-events:none;transition:opacity .12s ease;white-space:nowrap;font-size:11px;font-weight:650}
+.pull-refresh-indicator.visible{opacity:1}.pull-refresh-indicator>svg{transition:transform .15s ease}
+.profile-actions{display:grid;grid-template-columns:minmax(0,1fr) 42px;gap:8px;margin-top:21px;align-items:center}
+.profile-actions>.button{min-height:42px;padding:10px 12px;font-size:11px}.profile-actions .account-settings-button{width:42px;padding:10px}
+.account-form>.subtle{margin-bottom:22px;font-size:12px}.account-form>label{margin-top:18px}.account-form label>small{font-weight:450;color:var(--muted)}
+.account-form input{font-size:13px}.account-form>.button{margin-top:25px}.account-demo-note{font-size:11px;color:var(--muted);margin:12px 0}
+.account-confirmation>svg,.account-success>svg{color:var(--blue);margin:15px 0}.account-confirmation h3,.account-success h3{font-size:22px;margin-bottom:10px}
+.account-confirmation dl{background:var(--blue-soft);padding:17px 18px;border-radius:15px;margin:20px 0}.account-confirmation dt{display:flex;gap:8px;align-items:center;font-size:11px;color:var(--muted);margin-top:15px}.account-confirmation dt:first-child{margin-top:0}.account-confirmation dd{font-size:13px;overflow-wrap:anywhere;margin:7px 0 0;font-weight:650}
+.confirmation-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:25px}.confirmation-actions>.button{flex:1;font-size:11px}
+.account-success{text-align:center}.account-success p{font-size:13px;color:var(--muted);margin:14px 0;overflow-wrap:anywhere}.account-success strong{color:var(--ink)}.account-success>.button{margin-top:15px}
+@media(max-width:620px){.profile-actions{max-width:280px;margin-left:auto;margin-right:auto}.account-form input{font-size:16px}.account-form input::placeholder{font-size:11px}.confirmation-actions{flex-direction:column}.confirmation-actions>.button{width:100%;flex:auto}.pull-refresh-indicator{font-size:10px;padding:10px 13px}}
+
+.repair-email-link { text-align: left; margin-bottom: 16px; line-height: 1.5; }

@@ -92,7 +92,7 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
-13 test di dominio e 18 test di interfaccia su desktop e mobile. Per usare un Chromium già installato, imposta `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH`.
+18 test di logica e 29 scenari di interfaccia eseguiti su desktop e mobile; il caso sui gesti nei popup viene saltato su desktop, dove il gesto è disattivato. Per usare un Chromium già installato, imposta `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH`.
 
 `supabase/tests/club.sql` verifica sul vero PostgreSQL signup, permessi, inserimento atomico, idempotenza, ruoli, MVP, segnalazioni, limite orario e revoca accesso alla rimozione account. Va eseguito come `postgres` nel SQL Editor: usa dati di test con UUID casuali e termina con `ROLLBACK`, senza lasciare account, partite o segnalazioni di prova. È stato eseguito con esito positivo sul progetto remoto.
 
@@ -114,3 +114,17 @@ La migrazione `202610260002_profile_customization.sql` è già applicata al prog
 Il tema segue il dispositivo finché non si usa il pulsante sole/luna; la scelta manuale è ricordata nel browser. La corona del profilo segnala il primo classificato in almeno una classifica corrente fra punti/forza e mese/anno, ed è assente quando non ci sono partite nel periodo.
 
 Le icone includono SVG/ICO per il browser, PNG 180 per iOS e PNG 192/512 con manifest per Android e collegamenti alla home. `scripts/generate_icons.py` rigenera i PNG a partire dalla geometria del marchio (richiede Pillow). La configurazione Vercel esclude i file statici dalla riscrittura SPA, così manifest, icone e script del tema vengono serviti direttamente. Nessun service worker o comportamento offline viene aggiunto. Per un collegamento alla home già esistente può essere necessario rimuoverlo e aggiungerlo nuovamente per aggiornare l'icona memorizzata dal telefono.
+
+## Aggiornamento mobile e credenziali (28 ottobre 2026)
+
+Su telefoni e tablet touch con viewport fino a 1024 px, tirando verso il basso quando la pagina è già all'inizio appare l'indicatore di aggiornamento. Superata la soglia, al rilascio viene eseguito un vero `window.location.reload()`: sessione e dati Supabase vengono riletti. Gesti brevi, orizzontali, multitouch, campi di input, scorrimento interno e popup non attivano il reload. Il gesto è disponibile anche nella pagina di accesso e conserva il tema scelto nel browser.
+
+Accanto a **Modifica profilo** è disponibile **Email e password**, soltanto nel proprio profilo. Si possono cambiare uno o entrambi i campi. Dopo aver inserito la password attuale, **Conferma modifiche** mostra un secondo passaggio con il riepilogo; nessuna richiesta di aggiornamento viene inviata prima di **Sì, aggiorna credenziali**.
+
+L'app verifica la password attuale con un nuovo accesso e usa `supabase.auth.updateUser()`. Password e chiavi SMTP non sono salvate in `profiles`, nei log o nel codice del client. Il servizio Auth si occupa dell'hash della password e del controllo delle email duplicate. Un cambio email rimane in attesa fino alla conferma tramite i link inviati da Supabase; l'app non dichiara che l'indirizzo è già cambiato finché il servizio non lo conferma.
+
+**Password dimenticata?** invia un link verso `/?recovery=1` sul dominio da cui si usa l’app. La schermata richiede la nuova password due volte e accetta il cambio soltanto con una sessione di recupero valida; i link scaduti o non validi permettono di richiederne un altro. Un marcatore della sessione di recupero, senza password o token aggiuntivi, consente di riprendere il modulo dopo un refresh. Le risposte alla richiesta di recupero non rivelano se un indirizzo è registrato.
+
+Queste funzionalità non richiedono nuove tabelle o chiavi server nell'app. Il cambio password dal profilo funziona senza SMTP. Conferma del cambio email e recupero password richiedono invece il completamento della configurazione SMTP descritta in `docs/brevo-supabase.md`. Alla consegna del codice, l'invio reale delle email deve ancora essere verificato dopo il collegamento dell'account Brevo.
+
+Nel pannello account, **Hai usato un’email fittizia? Correggila** apre un percorso dedicato alla sola email, richiedendo la password attuale. Mantiene lo stesso ID utente e quindi statistiche, partite e punti. Per completarlo senza accedere alla vecchia casella serve che **Secure email change** sia disattivato in Supabase: la nuova casella resta da verificare. La configurazione e il limite del recupero in caso di password dimenticata sono descritti nella guida Brevo.
