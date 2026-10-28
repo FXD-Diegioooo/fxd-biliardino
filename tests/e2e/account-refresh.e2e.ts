@@ -75,6 +75,22 @@ test('correzione email fittizia conserva il profilo e richiede password e verifi
   expect(mock.state.updates[0]).not.toHaveProperty('password');expect(mock.state.user.id).toBe(playerId);
 });
 
+test('email confermata: aggiorna i dati Auth al rientro e rimuove gli avvisi obsoleti',async({page})=>{
+  const mock=await mockAccount(page);mock.state.user.new_email='new@example.test';await mock.login();
+  await page.getByRole('button',{name:'Il mio profilo',exact:true}).click();
+  await page.getByRole('button',{name:'Modifica email e password'}).click();
+  const dialog=page.getByRole('dialog');await expect(dialog).toContainText('Hai un cambio email in attesa di conferma');
+  // The email link was confirmed in another tab, while this tab retains its session.
+  mock.state.user.email='new@example.test';mock.state.user.new_email=undefined;
+  await page.evaluate(()=>window.dispatchEvent(new Event('focus')));
+  await expect(dialog).not.toContainText('Hai un cambio email in attesa');
+  await expect(dialog.getByLabel('Nuova email',{exact:true})).toHaveValue('new@example.test');
+  // Ignore new_email if the service retains the address that is already active.
+  mock.state.user.new_email='NEW@example.test';
+  await page.evaluate(()=>window.dispatchEvent(new Event('focus')));
+  await expect(dialog).not.toContainText('Hai un cambio email in attesa');
+});
+
 test('recupero password: richiesta email senza rivelare se un account esiste',async({page})=>{
   const mock=await mockAccount(page);await page.goto('/');await page.getByRole('button',{name:'Password dimenticata?'}).click();await page.getByLabel('Email',{exact:true}).fill('Absent@Example.Test');await page.getByRole('button',{name:'Invia link di recupero'}).click();
   await expect(page.getByRole('status')).toContainText('Se l’indirizzo è registrato');

@@ -24,14 +24,17 @@ test('banner persistente nel profilo e rifiuto di un nome già usato', async ({p
   await page.getByRole('button',{name:'Il mio profilo',exact:true}).click();
   await page.getByRole('button',{name:'Modifica profilo'}).click();
   await page.getByRole('radio',{name:'Lavanda'}).check();
+  await page.getByRole('button',{name:'Entrambi',exact:true}).click();
   await page.getByRole('textbox',{name:'Nome e cognome'}).fill('  gIULIA   rOSSI ');
   await page.getByRole('button',{name:'Salva il profilo'}).click();
   await expect(page.getByRole('alert')).toContainText('Questo nome è già utilizzato');
   await page.getByRole('textbox',{name:'Nome e cognome'}).fill('Diego Cogliati');
   await page.getByRole('button',{name:'Salva il profilo'}).click();
   await expect(page.locator('.profile-card .profile-cover')).toHaveAttribute('data-banner','lilac');
+  await expect(page.locator('.profile-card .pill')).toHaveText('Entrambi');
   await page.getByRole('button',{name:'Modifica profilo'}).click();
   await expect(page.getByRole('radio',{name:'Lavanda'})).toBeChecked();
+  await expect(page.getByRole('button',{name:'Entrambi',exact:true})).toHaveAttribute('aria-pressed','true');
 });
 
 test('tema di sistema, tema manuale persistente e corona sul campione', async ({page},info) => {

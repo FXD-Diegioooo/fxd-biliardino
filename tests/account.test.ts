@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { updateCredentials } from '../src/lib/account';
+import { pendingEmailAddress, updateCredentials } from '../src/lib/account';
 const user={id:'player-id',email:'old@example.test'};
 const fixture=()=>({getUser:vi.fn().mockResolvedValue({data:{user},error:null}),signInWithPassword:vi.fn().mockResolvedValue({data:{user},error:null}),updateUser:vi.fn().mockResolvedValue({data:{user},error:null})});
 type Auth=Parameters<typeof updateCredentials>[0];
@@ -34,5 +34,14 @@ describe('modifica credenziali',()=>{
   it('segnala una email già usata senza dichiarare aggiornamenti riusciti',async()=>{
     const auth=fixture();auth.updateUser.mockResolvedValue({data:{user:null},error:{code:'email_exists'}});
     await expect(updateCredentials(auth as unknown as Auth,user.id,{email:'duplicate@example.test',currentPassword:'OldPassword123'},'https://club.example')).rejects.toThrow('già utilizzata');
+  });
+});
+
+describe('stato del cambio email', () => {
+  it('non mostra come in attesa un indirizzo già attivo, anche con spazi o maiuscole', () => {
+    expect(pendingEmailAddress('New@Example.Test', ' new@example.test ')).toBeUndefined();
+    expect(pendingEmailAddress('new@example.test', '')).toBeUndefined();
+    expect(pendingEmailAddress('new@example.test', undefined)).toBeUndefined();
+    expect(pendingEmailAddress('old@example.test', 'new@example.test')).toBe('new@example.test');
   });
 });

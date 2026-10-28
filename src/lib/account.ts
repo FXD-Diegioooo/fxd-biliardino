@@ -1,6 +1,11 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 export interface CredentialChanges { email?: string; password?: string; currentPassword: string; }
 export interface CredentialResult { email: string; pendingEmail?: string; passwordChanged: boolean; }
+// A retained new_email value is not pending once it matches the active address.
+export function pendingEmailAddress(email?: string, pending?: string): string | undefined {
+  const candidate = pending?.trim();
+  return candidate && candidate.toLowerCase() !== email?.trim().toLowerCase() ? candidate : undefined;
+}
 export function accountError(error: { code?: string; message?: string }): string {
   const code = error.code || '', message = error.message || '';
   if (['invalid_credentials', 'invalid_login_credentials'].includes(code) || /invalid login|current password.*incorrect|invalid current password/i.test(message)) return 'La password attuale non è corretta.';

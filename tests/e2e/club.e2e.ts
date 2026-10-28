@@ -48,6 +48,7 @@ test('rifiuta pareggi e giocatori mancanti', async ({ page }, testInfo) => {
   await dialog.getByRole('spinbutton', { name: 'Gol Blu' }).fill('10');
   await dialog.getByRole('button', { name: 'Aggiungi la partita' }).click();
   await expect(dialog.getByRole('alert')).toContainText('Niente pareggi');
+  await expect(page.locator('.match-reaction')).toHaveCount(0);
   await dialog.getByRole('spinbutton', { name: 'Gol Blu' }).fill('8');
   await dialog.getByRole('button', { name: 'Aggiungi la partita' }).click();
   await expect(dialog.getByRole('alert')).toContainText('Ogni giocatore');

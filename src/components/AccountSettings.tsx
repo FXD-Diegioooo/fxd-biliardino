@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ArrowLeft, Check, Eye, EyeOff, KeyRound, Mail, ShieldCheck } from 'lucide-react';
+import { pendingEmailAddress } from '../lib/account';
 import type { CredentialChanges, CredentialResult } from '../lib/account';
 import { Modal } from './Shared';
 export function AccountSettings({ email, pendingEmail, demo, onClose, onUpdate }: {
@@ -14,6 +15,8 @@ export function AccountSettings({ email, pendingEmail, demo, onClose, onUpdate }
     setChange(next); setRepairing(false); setNewEmail(email); setPassword(''); setRepeat(''); setCurrent(''); setVisible(false); setError('');
   }
   const [result, setResult] = useState<CredentialResult | null>(null);
+  useEffect(() => { setNewEmail(email); setCurrent(''); setConfirming(false); }, [email]);
+  const resultPendingEmail = pendingEmailAddress(email || result?.email, result?.pendingEmail);
   const emailChanged = change === 'email' && newEmail.trim().toLowerCase() !== email.toLowerCase();
   function review(event: React.FormEvent) {
     event.preventDefault(); setError('');
@@ -37,7 +40,7 @@ export function AccountSettings({ email, pendingEmail, demo, onClose, onUpdate }
   return <Modal title={repairing ? "Correggi la tua email." : "Email e password."} onClose={() => !busy && onClose()}>
     {result ? <div className="account-success"><ShieldCheck size={38} /><h3>{demo ? 'Modifiche simulate.' : 'Modifiche registrate.'}</h3>
       {result.passwordChanged && <p>La password è stata aggiornata{demo ? ' nella demo' : ''}.</p>}
-      {result.pendingEmail ? <p>Il cambio email a <strong>{result.pendingEmail}</strong> è in attesa di conferma. Segui le istruzioni inviate via email; fino al completamento, il tuo indirizzo resta <strong>{result.email}</strong>.</p> : emailChanged && <p>La tua email è ora <strong>{result.email}</strong>.</p>}
+      {resultPendingEmail ? <p>Il cambio email a <strong>{resultPendingEmail}</strong> è in attesa di conferma. Segui le istruzioni inviate via email; fino al completamento, il tuo indirizzo resta <strong>{result.email}</strong>.</p> : (emailChanged || result.pendingEmail) && <p>La tua email è ora <strong>{result.pendingEmail ? email : result.email}</strong>.</p>}
       {demo && <p className="subtle">Nessun account reale è stato modificato.</p>}
       <button className="button primary full" onClick={onClose}>Chiudi <Check size={18} /></button>
     </div> : confirming ? <div className="account-confirmation">
@@ -51,7 +54,7 @@ export function AccountSettings({ email, pendingEmail, demo, onClose, onUpdate }
       {repairing ? <p className="subtle">Hai usato un indirizzo inventato o non più accessibile? Inserisci una casella che puoi aprire. Mantieni lo stesso profilo, le partite e tutti i punti. Serve la password attuale.</p> : <><p className="subtle">Scegli cosa vuoi modificare. Per confermare serve la password attuale.</p><button type="button" className="text-button repair-email-link" onClick={() => { setChange('email'); setRepairing(true); setNewEmail(''); setPassword(''); setRepeat(''); setError(''); }}>Hai usato un’email fittizia? Correggila</button></>}
       {repairing && <p className="account-demo-note">Email attuale: <strong>{email}</strong>. Non creare un secondo account: correggi questo.</p>}
       {demo && <p className="account-demo-note">Modalità demo: usa dati di prova.</p>}
-      {pendingEmail && <p className="success">Hai un cambio email in attesa di conferma verso {pendingEmail}.</p>}
+      {pendingEmailAddress(email, pendingEmail) && <p className="success">Hai un cambio email in attesa di conferma verso {pendingEmail}.</p>}
       {change === 'email' && <label>Nuova email<input type="email" required autoComplete="email" maxLength={254} value={newEmail} onChange={e => setNewEmail(e.target.value)} /></label>}
       {change === 'password' && <><label>Nuova password<div className="password-input"><input type={visible ? 'text' : 'password'} autoComplete="new-password" required minLength={8} value={password} onChange={e => setPassword(e.target.value)} placeholder="Almeno 8 caratteri" /><button type="button" aria-label={visible ? 'Nascondi nuova password' : 'Mostra nuova password'} onClick={() => setVisible(!visible)}>{visible ? <EyeOff size={18} /> : <Eye size={18} />}</button></div></label>
       <label>Conferma nuova password<input type={visible ? 'text' : 'password'} autoComplete="new-password" required={Boolean(password)} value={repeat} onChange={e => setRepeat(e.target.value)} /></label></>}

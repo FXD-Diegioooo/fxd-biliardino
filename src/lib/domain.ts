@@ -1,15 +1,16 @@
 import type { BannerColor } from './profile';
 export type Role = 'attack' | 'defense';
+export type PreferredRole = Role | 'both';
 export type Side = 'red' | 'blue';
 export type Period = 'month' | 'year';
 export type RankingMode = 'points' | 'strength';
-export interface Player { id: string; auth_user_id: string | null; full_name: string; preferred_role: Role; avatar_path: string | null; banner_color: BannerColor; }
+export interface Player { id: string; auth_user_id: string | null; full_name: string; preferred_role: PreferredRole; avatar_path: string | null; banner_color: BannerColor; }
 export interface Participant { player_id: string; side: Side; role: Role | 'single'; }
 export interface Match { id: string; created_at: string; added_by: string | null; red_score: number; blue_score: number; mvp_id: string | null; participants: Participant[]; }
 export interface MatchInput { request_id: string; red_score: number; blue_score: number; mvp_id: string | null; participants: Participant[]; }
 export interface Stats { played: number; wins: number; losses: number; points: number; mvps: number; winRate: number; strength: number; streak: number; bestStreak: number; goalsFor: number; goalsAgainst: number; companionId: string | null; companionGames: number; }
 export type RankedPlayer = Player & Stats & { position: number };
-export const roleLabel = (role: Role | 'single') => ({ attack: 'Attaccante', defense: 'Portiere', single: 'Singolo' })[role];
+export const roleLabel = (role: PreferredRole | 'single') => ({ attack: 'Attaccante', defense: 'Portiere', single: 'Singolo', both: 'Entrambi' })[role];
 export const winner = (match: Pick<Match, 'red_score' | 'blue_score'>): Side => match.red_score > match.blue_score ? 'red' : 'blue';
 export const italyDate = (date: string | Date, options: Intl.DateTimeFormatOptions = {}) => new Intl.DateTimeFormat('it-IT', { timeZone: 'Europe/Rome', ...options }).format(new Date(date));
 export function inPeriod(match: Match, period: Period, now = new Date()) {

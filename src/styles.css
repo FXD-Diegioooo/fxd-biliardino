@@ -74,3 +74,20 @@ html.pull-refresh-enabled,html.pull-refresh-enabled body{overscroll-behavior-y:n
 .account-change-picker label { display: flex; align-items: center; gap: 8px; padding: 13px; border: 1px solid var(--line); border-radius: 12px; cursor: pointer; }
 .account-change-picker label:has(input:checked) { background: var(--blue-soft); border-color: var(--blue); color: var(--blue); }
 .account-change-picker input { width: auto; margin: 0; accent-color: var(--blue); }
+
+.match-reaction{position:fixed;inset:0;z-index:30;pointer-events:none;overflow:hidden}
+.reaction-decoration{position:absolute;inset:0;overflow:hidden}
+.confetti-piece{position:absolute;top:-20px;width:9px;height:15px;opacity:0;animation:confetti-fall var(--duration) var(--delay) cubic-bezier(.16,.55,.65,1) both;will-change:transform,opacity}
+.reaction-message{position:absolute;left:50%;top:22%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:9px;padding:22px 25px;width:max-content;max-width:calc(100% - 40px);border:1px solid var(--line);border-radius:24px;background:var(--surface);box-shadow:0 12px 50px #13294425;text-align:center;animation:reaction-appear 3.4s both}
+.reaction-message strong{font-size:20px;line-height:1.25;color:var(--ink)}
+.reaction-message>span{font-size:12px;color:var(--muted);line-height:1.5}
+.reaction-trophy{color:var(--gold-ink);animation:trophy-cheer .65s .1s ease-in-out 3}
+.sad-face{position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--blue-ink);animation:sad-sway 1.15s ease-in-out 2}
+.sad-face>svg:first-child{color:var(--muted)}
+.sad-tear{position:absolute;right:4px;top:53px;width:7px;height:11px;border-radius:60% 20% 60% 60%;background:#73b2f7;animation:sad-teardrop 1s .35s ease-in 2 both}
+@keyframes confetti-fall{0%{transform:translate3d(0,-3vh,0) rotate(0);opacity:0}8%{opacity:1}80%{opacity:1}100%{transform:translate3d(var(--drift),105vh,0) rotate(var(--spin));opacity:0}}
+@keyframes reaction-appear{0%{opacity:0;translate:0 15px;scale:.95}10%,82%{opacity:1;translate:0 0;scale:1}100%{opacity:0;translate:0 -10px;scale:1}}
+@keyframes trophy-cheer{0%,100%{transform:rotate(-9deg) translateY(0)}50%{transform:rotate(9deg) translateY(-5px)}}
+@keyframes sad-sway{0%,100%{transform:rotate(-5deg) translateY(0)}50%{transform:rotate(5deg) translateY(4px)}}
+@keyframes sad-teardrop{0%{opacity:0;transform:translateY(-3px)}25%{opacity:1}100%{opacity:0;transform:translateY(18px)}}
+@media(prefers-reduced-motion:reduce){.confetti-piece{display:none}.reaction-message,.reaction-trophy,.sad-face,.sad-tear{animation:none}.sad-tear{display:none}}

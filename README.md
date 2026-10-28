@@ -128,3 +128,9 @@ L'app verifica la password attuale con un nuovo accesso e usa `supabase.auth.upd
 Queste funzionalità non richiedono nuove tabelle o chiavi server nell'app. Il cambio password dal profilo funziona senza SMTP. Conferma del cambio email e recupero password richiedono invece il completamento della configurazione SMTP descritta in `docs/brevo-supabase.md`. Alla consegna del codice, l'invio reale delle email deve ancora essere verificato dopo il collegamento dell'account Brevo.
 
 Nel pannello account, **Hai usato un’email fittizia? Correggila** apre un percorso dedicato alla sola email, richiedendo la password attuale. Mantiene lo stesso ID utente e quindi statistiche, partite e punti. Per completarlo senza accedere alla vecchia casella serve che **Secure email change** sia disattivato in Supabase: la nuova casella resta da verificare. La configurazione e il limite del recupero in caso di password dimenticata sono descritti nella guida Brevo.
+
+## Preferenza di ruolo flessibile (28 ottobre 2026)
+
+Nel profilo si può scegliere **Attaccante**, **Portiere** o **Entrambi**. La preferenza `both` appartiene al tipo `PreferredRole`; i ruoli assegnati nelle partite rimangono attacco/difesa nei doppi e singolo negli 1 contro 1.
+
+La migrazione `202610280001_flexible_preferred_role.sql` è già applicata al progetto Supabase remoto. Il controllo `supabase/tests/flexible_preferred_role.sql` è stato eseguito con successo e termina con `ROLLBACK`, senza lasciare profili temporanei. Verifica le tre preferenze ammesse, il rifiuto dei valori non validi e il rifiuto di `both` come ruolo in partita.
