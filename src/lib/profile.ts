@@ -16,7 +16,7 @@ export function leadingRankings(playerId: string, players: Player[], matches: Ma
     if (!selected.length) continue;
     for (const mode of ['points', 'strength'] as const) {
       const leader = rankPlayers(players, selected, mode)[0];
-      if (leader?.id === playerId && leader.played > 0) titles.push(`Primo per ${mode === 'points' ? 'punti' : 'forza'} ${period === 'month' ? 'questo mese' : 'quest’anno'}`);
+      if (leader?.id === playerId && leader.position === 1 && leader.played > 0) titles.push(`Primo per ${mode === 'points' ? 'punti' : 'forza'} ${period === 'month' ? 'questo mese' : 'quest’anno'}`);
     }
   }
   return titles;

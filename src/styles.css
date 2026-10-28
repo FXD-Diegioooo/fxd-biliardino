@@ -91,3 +91,11 @@ html.pull-refresh-enabled,html.pull-refresh-enabled body{overscroll-behavior-y:n
 @keyframes sad-sway{0%,100%{transform:rotate(-5deg) translateY(0)}50%{transform:rotate(5deg) translateY(4px)}}
 @keyframes sad-teardrop{0%{opacity:0;transform:translateY(-3px)}25%{opacity:1}100%{opacity:0;transform:translateY(18px)}}
 @media(prefers-reduced-motion:reduce){.confetti-piece{display:none}.reaction-message,.reaction-trophy,.sad-face,.sad-tear{animation:none}.sad-tear{display:none}}
+
+.rank-value.provisional{font-size:11px;line-height:1.35;overflow-wrap:normal}.rank-value.provisional small{display:block;font-size:8px;color:var(--muted);margin-top:4px}.career-summary .strength-pending{font-size:16px;line-height:1.5}.career-summary .strength-pending small{display:block;font-size:10px}
+
+.strength-table .ranking-row,.strength-table .ranking-table-head{grid-template-columns:28px minmax(0,1fr) 61px 65px 95px 12px}
+.rank-value.provisional{white-space:normal}
+@media(max-width:1100px){.strength-table .ranking-row,.strength-table .ranking-table-head{grid-template-columns:22px minmax(0,1fr) 45px 47px 80px 10px}}
+@media(max-width:800px){.strength-table .ranking-row,.strength-table .ranking-table-head{grid-template-columns:22px minmax(0,1fr) 42px 74px 9px}}
+@media(max-width:620px){.strength-table .ranking-row,.strength-table .ranking-table-head{grid-template-columns:24px minmax(0,1fr) 38px 74px 10px}}

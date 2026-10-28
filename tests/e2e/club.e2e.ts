@@ -31,7 +31,7 @@ test('salva un singolo, aggiorna punteggio e mostra il dettaglio e la segnalazio
   await dialog.getByRole('combobox', { name: 'MVP della partita' }).selectOption('diego');
   await dialog.getByRole('button', { name: 'Aggiungi la partita' }).click();
   await expect(dialog).not.toBeVisible();
-  await expect(page.locator('.ranking-row.is-me .rank-value')).toHaveText(`${pointsBefore + 15}pt`);
+  await expect(page.locator('.ranking-row.is-me .rank-value')).toHaveText(`${pointsBefore + 13}pt`);
   await page.locator('.recent-section .match-card').first().click();
   await expect(page.getByRole('heading', { name: 'La partita, nel dettaglio' })).toBeVisible();
   await expect(page.getByText('Vince la squadra rossa')).toBeVisible();

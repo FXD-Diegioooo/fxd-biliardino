@@ -74,8 +74,8 @@ Su Vercel:
 
 ## Classifiche e statistiche
 
-- **Punti**: vittoria +10, sconfitta 0, MVP +5 anche nella squadra perdente.
-- **Forza**: limite inferiore di Wilson, z=1,28, moltiplicato per 100 e arrotondato a un decimale. Premia buone medie sostenute da più partite: 1/1 → 37,9; 8/10 → 60,2. Nessuna partita → 0.
+- **Punti**: vittoria +10, sconfitta 0, MVP +3 anche nella squadra perdente.
+- **Forza**: Elo a squadre da 1.000, aggiornato cronologicamente; 5 partite nel periodo per entrare in classifica. MVP +20% sul guadagno o −20% sulla perdita.
 - In entrambe le classifiche, a parità del valore visualizzato, prima più MVP, poi più partite, infine il nome.
 - Classifiche per mese e anno correnti, nel fuso `Europe/Rome`; statistiche del profilo su tutta la carriera, posizione e punti principali sull'anno corrente.
 - Vittorie consecutive attuali e record personale; compagno con più partite nella stessa squadra; gol di squadra, vittorie/sconfitte e percentuale vittorie.
@@ -134,3 +134,13 @@ Nel pannello account, **Hai usato un’email fittizia? Correggila** apre un perc
 Nel profilo si può scegliere **Attaccante**, **Portiere** o **Entrambi**. La preferenza `both` appartiene al tipo `PreferredRole`; i ruoli assegnati nelle partite rimangono attacco/difesa nei doppi e singolo negli 1 contro 1.
 
 La migrazione `202610280001_flexible_preferred_role.sql` è già applicata al progetto Supabase remoto. Il controllo `supabase/tests/flexible_preferred_role.sql` è stato eseguito con successo e termina con `ROLLBACK`, senza lasciare profili temporanei. Verifica le tre preferenze ammesse, il rifiuto dei valori non validi e il rifiuto di `both` come ruolo in partita.
+
+## Forza retroattiva (28 ottobre 2026)
+
+Il nuovo calcolo rilegge le partite già salvate, ordinate per istante di creazione e, a parità, ID. Non vengono sovrascritti risultati o record del database: basta distribuire il nuovo codice perché i dati esistenti siano ricalcolati. I giocatori rimossi contribuiscono alle valutazioni storiche degli avversari e dei compagni, ma non compaiono nella classifica corrente.
+
+`src/lib/strength.ts` definisce i parametri: base 1.000, K=32, scala Elo=400, soglia 5 partite, correttivo MVP=20%. Prima di ogni incontro si calcola la media dei rating di ciascuna squadra. Per i rossi: `E = 1 / (1 + 10^((mediaBlu-mediaRossi)/400))`, `delta = 32*(risultato-E)` con risultato 1 per vittoria e 0 per sconfitta. I blu ricevono la variazione opposta. Tutti gli aggiornamenti usano i valori precedenti alla partita. Il solo MVP moltiplica la propria variazione per 1,2 se positiva o per 0,8 se negativa; la sua sconfitta non diventa un guadagno. Il correttivo individuale rende questo adattamento intenzionalmente non a somma zero. Non si applicano bonus ai gol, ai ruoli o al formato.
+
+Le prime quattro partite contribuiscono già alla forza interna ma il giocatore appare **In valutazione · X/5 partite**, senza posizione o podio di forza. Dalla quinta entra nella classifica ufficiale. I valori si espongono arrotondati a un decimale; a parità contano gli MVP, le presenze e il nome.
+
+Le classifiche mensile e annuale ripartono ciascuna da 1.000 e richiedono 5 partite nel relativo periodo, mantenendo la selezione di calendario italiano esistente. La forza nel profilo usa invece tutta la carriera e richiede 5 partite totali. La classifica a punti resta vittoria +10 e MVP +3.

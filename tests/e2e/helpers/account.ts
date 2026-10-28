@@ -1,9 +1,10 @@
+import type { Match } from '../../../src/lib/domain';
 import type { Page } from '@playwright/test';
 export async function mockAccount(page: Page) {
   const id='11111111-1111-4111-8111-111111111111';
   const state={
     user:{id,email:'diego@example.test',new_email:undefined as string|undefined,aud:'authenticated',role:'authenticated',created_at:'2026-01-01T10:00:00Z',app_metadata:{provider:'email',providers:['email']},user_metadata:{full_name:'Diego Test'}},
-    password:'CurrentPassword123!',updates:[] as Record<string,string>[],profileReads:0,recoveries:[] as {email:string;redirect:string|null}[],updateError:null as string|null,
+    matches:[] as Match[],password:'CurrentPassword123!',updates:[] as Record<string,string>[],profileReads:0,recoveries:[] as {email:string;redirect:string|null}[],updateError:null as string|null,
   };
   const token=()=>[Buffer.from(JSON.stringify({alg:'HS256',typ:'JWT'})).toString('base64url'),Buffer.from(JSON.stringify({sub:id,email:state.user.email,role:'authenticated',aud:'authenticated',iat:Math.floor(Date.now()/1000),exp:Math.floor(Date.now()/1000)+7200})).toString('base64url'),'test-signature'].join('.');
   const session=()=>({access_token:token(),refresh_token:'test-refresh-token',token_type:'bearer',expires_in:7200,expires_at:Math.floor(Date.now()/1000)+7200,user:state.user});
@@ -29,6 +30,7 @@ export async function mockAccount(page: Page) {
   });
   await page.route('**/rest/v1/**',async route=>{
     const url=new URL(route.request().url());let data:unknown=[];
+    if(url.pathname.endsWith('/matches'))data=state.matches;
     if(url.pathname.endsWith('/profiles')){state.profileReads++;data=[{id:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',auth_user_id:id,full_name:'Diego Test',preferred_role:'attack',banner_color:'blue',avatar_path:null},{id:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',auth_user_id:'22222222-2222-4222-8222-222222222222',full_name:'Altro Giocatore',preferred_role:'defense',banner_color:'mint',avatar_path:null}];}
     await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(data)});
   });
