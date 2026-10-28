@@ -5,12 +5,12 @@ import { getStats, POINTS, inPeriod, rankPlayers, roleLabel } from '../lib/domai
 import { Avatar, Empty, MatchCard, Modal } from './Shared';
 import { banners, leadingRankings, normalizeDisplayName } from '../lib/profile';
 import type { BannerColor } from '../lib/profile';
-import { STRENGTH } from '../lib/strength';
+import { calculateStrength, STRENGTH } from '../lib/strength';
 import { AccountSettings } from './AccountSettings';
 import type { CredentialChanges, CredentialResult } from '../lib/account';
 export function Profile({ player, players, matches, own, onMatch, onBack, onUpdate, accountEmail, pendingEmail, demo, onCredentials }: { player: Player; players: Player[]; matches: Match[]; own: boolean; onMatch: (match: Match) => void; onBack: () => void; onUpdate: (name: string, role: PreferredRole, banner: BannerColor, file?: File) => Promise<void>; accountEmail: string; pendingEmail?: string; demo: boolean; onCredentials: (changes: CredentialChanges) => Promise<CredentialResult> }) {
   const [editing, setEditing] = useState(false), [accountOpen, setAccountOpen] = useState(false), [limit, setLimit] = useState(10);
-  const s = getStats(player.id, matches), companion = players.find(p => p.id === s.companionId);
+  const s = getStats(player.id, matches, calculateStrength(matches, players)), companion = players.find(p => p.id === s.companionId);
   const yearMatches = matches.filter(m => inPeriod(m, 'year'));
   const titles = leadingRankings(player.id, players, matches);
   const ranked = rankPlayers(players, yearMatches, 'points').find(p => p.id === player.id) as RankedPlayer | undefined;

@@ -5,7 +5,7 @@ import type { Match, Player } from '../src/lib/domain';
 const game = (n: number, red = ['a'], blue = ['b'], won = true, mvp: string | null = null): Match => ({
   id: String(n).padStart(3,'0'),created_at: new Date(Date.UTC(2026,9,1,0,n)).toISOString(),added_by:null,
   red_score: won ? 10 : 3,blue_score:won ? 3 : 10,mvp_id:mvp,
-  participants:[...red.map(player_id=>({player_id,side:'red' as const,role:'attack' as const})),...blue.map(player_id=>({player_id,side:'blue' as const,role:'defense' as const}))],
+  participants:[...red.map((player_id,i)=>({player_id,side:'red' as const,role:red.length===1?'single' as const:i===0?'attack' as const:'defense' as const})),...blue.map((player_id,i)=>({player_id,side:'blue' as const,role:blue.length===1?'single' as const:i===0?'attack' as const:'defense' as const}))],
 });
 const value = (games:Match[],id='a') => calculateStrength(games).get(id)!.rating;
 describe('forza retroattiva a squadre',()=>{
@@ -47,5 +47,35 @@ describe('forza retroattiva a squadre',()=>{
     expect(ranked.find(p=>p.id==='c')?.position).toBeNull();expect(ranked[0].id).toBe('a');
     expect(rankPlayers([{...players[0],auth_user_id:null},...players.slice(1)],games,'strength').some(p=>p.id==='a')).toBe(false);
     expect(calculateStrength(games).has('a')).toBe(true);
+  });
+});
+
+describe('correttivo fuori ruolo',()=>{
+  const withPreference=(won=true,mvp:string|null=null,preference:'attack'|'defense'|'both'='defense')=>{
+    const m=game(1,['a','c'],['b','d'],won,mvp);
+    m.participants=m.participants.map(p=>({...p,preferred_role_at_match:p.player_id==='a'?preference:'both'}));
+    return m;
+  };
+  it('aggiunge il 10% alla vittoria e riduce del 10% la perdita',()=>{
+    expect(value([withPreference()])).toBeCloseTo(1017.6);
+    expect(value([withPreference(false)])).toBeCloseTo(985.6);
+    expect(value([withPreference()],'c')).toBe(1016);
+  });
+  it('somma MVP e fuori ruolo al 30%, senza moltiplicarli e senza rendere positiva una sconfitta',()=>{
+    expect(value([withPreference(true,'a')])).toBeCloseTo(1020.8);
+    expect(value([withPreference(false,'a')])).toBeCloseTo(988.8);
+  });
+  it('non cambia nulla nel ruolo preferito, con Entrambi o nel singolo',()=>{
+    expect(value([withPreference(true,null,'attack')])).toBe(1016);
+    expect(value([withPreference(true,null,'both')])).toBe(1016);
+    const single=game(1);single.participants[0].preferred_role_at_match='defense';
+    expect(value([single])).toBe(1016);
+  });
+  it('usa lo snapshot storico e non ricalcola con una preferenza successivamente modificata',()=>{
+    const history=[withPreference()];
+    const players=['a','b','c','d'].map(id=>({id,auth_user_id:id,full_name:id,preferred_role:'attack',avatar_path:null,banner_color:'blue'} as Player));
+    const before=calculateStrength(history,players);
+    expect(calculateStrength(history,players.map(p=>({...p,preferred_role:'both'})))).toEqual(before);
+    expect(before.get('a')!.rating).toBeCloseTo(1017.6);
   });
 });

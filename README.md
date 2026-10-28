@@ -144,3 +144,19 @@ Il nuovo calcolo rilegge le partite già salvate, ordinate per istante di creazi
 Le prime quattro partite contribuiscono già alla forza interna ma il giocatore appare **In valutazione · X/5 partite**, senza posizione o podio di forza. Dalla quinta entra nella classifica ufficiale. I valori si espongono arrotondati a un decimale; a parità contano gli MVP, le presenze e il nome.
 
 Le classifiche mensile e annuale ripartono ciascuna da 1.000 e richiedono 5 partite nel relativo periodo, mantenendo la selezione di calendario italiano esistente. La forza nel profilo usa invece tutta la carriera e richiede 5 partite totali. La classifica a punti resta vittoria +10 e MVP +3.
+
+## Partecipanti ospiti (28 ottobre 2026)
+
+Nella ricerca dei partecipanti compare **Ospite**. Sono ammessi massimo 2 ospiti nei doppi (anche entrambi nella stessa squadra) e 1 nel singolo. Non possono essere MVP. Per distinguere i due posti esistono due profili virtuali riservati, entrambi chiamati Ospite, privi di account Auth e marcati `is_guest`. Restano esclusi dalle classifiche e dal miglior compagno; compaiono nello storico con il ruolo assegnato.
+
+Nel ricalcolo della forza ciascun ospite assume la stessa media, fotografata prima di ogni incontro, dei rating degli account registrati. La media include chi non ha ancora giocato (base 1.000); gli account con data di iscrizione successiva all'incontro vengono esclusi. L'ospite non accumula rating o presenze personali. Mese, anno e carriera usano ciascuno il relativo storico. Vittorie, sconfitte, punti e presenze dei partecipanti reali continuano a contare normalmente.
+
+La migrazione `202610280002_guest_players.sql` è applicata al progetto remoto. Aggiorna `add_match` mantenendo autenticazione, controlli sugli account rimossi/sospesi, ruoli, MVP e idempotenza; aggiunge limiti ospiti e divieto MVP anche lato server. Gli utenti non possono creare, modificare o marcare profili come ospiti. `supabase/tests/guests.sql` ha verificato sul database le combinazioni ammesse, i limiti, i duplicati, l'MVP e i permessi; termina con `ROLLBACK`, senza lasciare account o partite di prova.
+
+## Correttivo fuori ruolo e preferenza storica (28 ottobre 2026)
+
+Nei doppi, un giocatore che ricopre il ruolo opposto a quello preferito riceve un correttivo del 10% sulla variazione Elo: +10% sul guadagno, −10% sull'entità della perdita. Nessun correttivo per il ruolo preferito, la preferenza Entrambi, i singoli o gli ospiti. Il correttivo si somma a quello MVP: vincitore MVP fuori ruolo ×1,30; perdente MVP fuori ruolo ×0,70. Non si moltiplicano 1,20 e 1,10. I punti vittoria/MVP e la soglia delle 5 partite restano invariati.
+
+La migrazione `202610280003_role_preference_snapshot.sql` è applicata al database remoto. Aggiunge `match_participants.preferred_role_at_match`, popolata una volta sulle partecipazioni esistenti con la preferenza del profilo presente al momento della migrazione. È una stima retroattiva, perché prima non si registravano i cambi di preferenza. Un trigger di inserimento legge la preferenza effettiva dal profilo lato server, anche se il client prova a specificarne un'altra. Il client continua a non poter modificare le partecipazioni. Cambiare la preferenza nel profilo influenza solo le partite future.
+
+Tutti i caricamenti delle partite includono il nuovo campo. Anche la demo congela la preferenza per ogni partecipazione. Nel dettaglio di una partita fuori ruolo si vede la preferenza salvata accanto al ruolo giocato. `supabase/tests/role_preference_snapshot.sql` verifica la preferenza server, il rifiuto delle modifiche allo storico, gli ospiti e i retry, annullando i dati di prova con `ROLLBACK`.

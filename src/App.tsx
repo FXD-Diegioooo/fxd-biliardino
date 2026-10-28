@@ -13,6 +13,7 @@ import { Profile } from './components/Profile';
 import { ThemeToggle } from './components/ThemeToggle';
 import { duplicateNameMessage, nameKey, normalizeDisplayName } from './lib/profile';
 import type { BannerColor } from './lib/profile';
+import { guestPlayers } from './lib/guests';
 import { MatchReaction } from './components/MatchReaction';
 import { PullToRefresh } from './components/PullToRefresh';
 import { pendingEmailAddress, updateCredentials } from './lib/account';
@@ -49,7 +50,7 @@ function ClubApp() {
   }, [notify]);
   useEffect(() => {
     if (!user || demo) return; let live = true; setLoading(true); setDataError(''); setPlayers([]); setMatches([]);
-    Promise.all([fetchAll('profiles', '*'), fetchAll('matches', '*, participants:match_participants(player_id, side, role)')]).then(([p, m]) => { if (live) { setPlayers(p as Player[]); setMatches(m as Match[]); setLoadedFor(user.id); } }).catch(e => { if (live) setDataError(e.message || 'Impossibile caricare il club.'); }).finally(() => { if (live) setLoading(false); });
+    Promise.all([fetchAll('profiles', '*'), fetchAll('matches', '*, participants:match_participants(player_id, side, role, preferred_role_at_match)')]).then(([p, m]) => { if (live) { setPlayers(p as Player[]); setMatches(m as Match[]); setLoadedFor(user.id); } }).catch(e => { if (live) setDataError(e.message || 'Impossibile caricare il club.'); }).finally(() => { if (live) setLoading(false); });
     return () => { live = false; };
   }, [user?.id, demo, reload]);
   useEffect(() => {
@@ -71,7 +72,7 @@ function ClubApp() {
     return () => { live = false; window.removeEventListener('focus', syncAccount); document.removeEventListener('visibilitychange', syncAccount); };
   }, [user?.id, demo, view]);
   const me = players.find(p => demo ? p.id === 'diego' : p.auth_user_id === user?.id);
-  function startDemo() { setDemoEmail('diego@example.invalid'); setDemo(true); setPlayers(demoPlayers.map(p => ({ ...p }))); setMatches(makeDemoMatches()); setView('ranking'); setProfileId(null); }
+  function startDemo() { setDemoEmail('diego@example.invalid'); setDemo(true); setPlayers([...demoPlayers, ...guestPlayers].map(p => ({ ...p }))); setMatches(makeDemoMatches().map(match => ({ ...match, participants: match.participants.map(p => ({ ...p, preferred_role_at_match: demoPlayers.find(player => player.id === p.player_id)?.preferred_role || 'both' })) }))); setView('ranking'); setProfileId(null); }
   function navigate(next: View) { setView(next); if (next === 'profile') setProfileId(me?.id || null); window.scrollTo({ top: 0, behavior: 'smooth' }); }
   function openProfile(id: string) { setProfileId(id); setView('profile'); window.scrollTo({ top: 0, behavior: 'smooth' }); }
   async function logout() { if (!demo && supabase) { const { error } = await supabase.auth.signOut(); if (error) { notify('Uscita non riuscita. Riprova.'); return; } } setDemo(false); setPlayers([]); setMatches([]); setUser(null); setReaction(null); setDetail(null); setNewMatch(false); setView('ranking'); }
@@ -82,10 +83,10 @@ function ClubApp() {
   async function saveMatch(input: MatchInput) {
     const validation = validateMatch(input); if (validation) throw new Error(validation);
     if (!me) throw new Error('Profilo non disponibile. Ricarica la pagina.');
-    if (demo) { setMatches(ms => [{ ...input, id: crypto.randomUUID(), added_by: me.id, created_at: new Date().toISOString() }, ...ms]); notify('Partita aggiunta alla demo. I punti sono aggiornati!'); reactToMatch(input); return; }
+    if (demo) { setMatches(ms => [{ ...input, id: crypto.randomUUID(), added_by: me.id, created_at: new Date().toISOString(), participants: input.participants.map(p => ({ ...p, preferred_role_at_match: players.find(player => player.id === p.player_id)?.preferred_role || 'both' })) }, ...ms]); notify('Partita aggiunta alla demo. I punti sono aggiornati!'); reactToMatch(input); return; }
     const { data: id, error } = await supabase!.rpc('add_match', { p_request_id: input.request_id, p_red_score: input.red_score, p_blue_score: input.blue_score, p_mvp_id: input.mvp_id, p_participants: input.participants });
     if (error) throw new Error(error.message);
-    const { data, error: fetchError } = await supabase!.from('matches').select('*, participants:match_participants(player_id, side, role)').eq('id', id).single();
+    const { data, error: fetchError } = await supabase!.from('matches').select('*, participants:match_participants(player_id, side, role, preferred_role_at_match)').eq('id', id).single();
     if (fetchError) throw new Error('La partita è salvata, ma non è stato possibile ricaricarla. Riprova: non verrà duplicata.');
     setMatches(ms => [data as Match, ...ms.filter(m => m.id !== id)].sort((a, b) => b.created_at.localeCompare(a.created_at))); notify('Partita aggiunta. La classifica è aggiornata!'); reactToMatch(input);
   }

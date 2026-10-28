@@ -31,3 +31,23 @@ test('ricalcolo dello storico: quattro partite in valutazione, cinque sbloccano 
   await page.getByRole('button',{name:'Il mio profilo',exact:true}).click();
   await expect(page.locator('.career-summary')).not.toContainText('In valutazione');
 });
+
+test('preferenza congelata nella partita e forza invariata dopo il cambio nel profilo',async({page},info)=>{
+  await page.goto('/');await page.getByRole('button',{name:'Esplora la demo'}).click();
+  const add=info.project.name==='mobile'?page.locator('.mobile-nav').getByRole('button',{name:'Aggiungi',exact:true}):page.getByRole('button',{name:'Aggiungi partita',exact:true}).first();
+  await add.click();const dialog=page.getByRole('dialog');
+  for(const name of ['Marco Bianchi','Diego Cogliati','Luca Colombo','Alessandro Riva']){
+    await dialog.getByRole('combobox').first().fill(name);await dialog.getByRole('option',{name,exact:true}).click();
+  }
+  await dialog.getByRole('combobox',{name:'MVP della partita'}).selectOption('diego');
+  await dialog.getByRole('button',{name:'Aggiungi la partita'}).click();await expect(dialog).not.toBeVisible();
+  await page.locator('.recent-section .match-card').first().click();
+  await expect(page.getByRole('dialog').locator('.person-line').filter({hasText:'Diego Cogliati'})).toContainText('Portiere · preferenza: Attaccante');
+  await page.getByRole('button',{name:'Chiudi',exact:true}).click();
+  await page.getByRole('button',{name:'Il mio profilo',exact:true}).click();
+  const score=page.locator('.career-summary>div').first().locator('strong');const before=await score.innerText();
+  await page.getByRole('button',{name:'Modifica profilo'}).click();
+  await page.getByRole('button',{name:'Portiere',exact:true}).click();
+  await page.getByRole('button',{name:'Salva il profilo'}).click();
+  await expect(page.locator('.profile-card .pill')).toHaveText('Portiere');await expect(score).toHaveText(before);
+});
