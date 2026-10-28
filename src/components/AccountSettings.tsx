@@ -9,11 +9,16 @@ export function AccountSettings({ email, pendingEmail, demo, onClose, onUpdate }
   const [newEmail, setNewEmail] = useState(email), [password, setPassword] = useState(''), [repeat, setRepeat] = useState(''), [current, setCurrent] = useState('');
   const [visible, setVisible] = useState(false), [confirming, setConfirming] = useState(false), [busy, setBusy] = useState(false), [error, setError] = useState('');
   const [repairing, setRepairing] = useState(false);
+  const [change, setChange] = useState<'email' | 'password'>('email');
+  function chooseChange(next: 'email' | 'password') {
+    setChange(next); setRepairing(false); setNewEmail(email); setPassword(''); setRepeat(''); setCurrent(''); setVisible(false); setError('');
+  }
   const [result, setResult] = useState<CredentialResult | null>(null);
-  const emailChanged = newEmail.trim().toLowerCase() !== email.toLowerCase();
+  const emailChanged = change === 'email' && newEmail.trim().toLowerCase() !== email.toLowerCase();
   function review(event: React.FormEvent) {
     event.preventDefault(); setError('');
-    if (!emailChanged && !password) { setError('Modifica l’email o inserisci una nuova password.'); return; }
+    if (change === 'email' && !emailChanged) { setError('Inserisci un’email diversa da quella attuale.'); return; }
+    if (change === 'password' && !password) { setError('Inserisci la nuova password.'); return; }
     if (password && password.length < 8) { setError('La nuova password deve contenere almeno 8 caratteri.'); return; }
     if (password !== repeat) { setError('Le nuove password non coincidono.'); return; }
     if (password && password === current) { setError('La nuova password deve essere diversa da quella attuale.'); return; }
@@ -24,7 +29,7 @@ export function AccountSettings({ email, pendingEmail, demo, onClose, onUpdate }
     if (busy) return;
     setBusy(true); setError('');
     try {
-      const saved = await onUpdate({ email: emailChanged ? newEmail.trim().toLowerCase() : undefined, password: password || undefined, currentPassword: current });
+      const saved = await onUpdate({ email: emailChanged ? newEmail.trim().toLowerCase() : undefined, password: change === 'password' ? password : undefined, currentPassword: current });
       setPassword(''); setRepeat(''); setCurrent(''); setResult(saved);
     } catch (e) { setError(e instanceof Error ? e.message : 'Aggiornamento non riuscito. Riprova.'); }
     finally { setBusy(false); }
@@ -42,12 +47,13 @@ export function AccountSettings({ email, pendingEmail, demo, onClose, onUpdate }
       {error && <p className="error" role="alert">{error}</p>}
       <div className="confirmation-actions"><button className="button secondary" disabled={busy} onClick={() => { setConfirming(false); setError(''); }}><ArrowLeft size={16} /> Torna indietro</button><button className="button primary" disabled={busy} onClick={save}>{busy ? 'Aggiornamento…' : 'Sì, aggiorna credenziali'}</button></div>
     </div> : <form onSubmit={review} className="account-form">
-      {repairing ? <p className="subtle">Hai usato un indirizzo inventato o non più accessibile? Inserisci una casella che puoi aprire. Mantieni lo stesso profilo, le partite e tutti i punti. Serve la password attuale.</p> : <><p className="subtle">Puoi cambiare l’email, la password o entrambe. Per confermare serve la password attuale.</p><button type="button" className="text-button repair-email-link" onClick={() => { setRepairing(true); setNewEmail(''); setPassword(''); setRepeat(''); setError(''); }}>Hai usato un’email fittizia? Correggila</button></>}
+      <fieldset className="account-change-picker"><legend>Cosa vuoi modificare?</legend><div>{(['email', 'password'] as const).map(option => <label key={option}><input type="radio" name="credential-change" value={option} checked={change === option} onChange={() => chooseChange(option)} />{option === 'email' ? <Mail size={17} /> : <KeyRound size={17} />}<span>{option === 'email' ? 'Email' : 'Password'}</span></label>)}</div></fieldset>
+      {repairing ? <p className="subtle">Hai usato un indirizzo inventato o non più accessibile? Inserisci una casella che puoi aprire. Mantieni lo stesso profilo, le partite e tutti i punti. Serve la password attuale.</p> : <><p className="subtle">Scegli cosa vuoi modificare. Per confermare serve la password attuale.</p><button type="button" className="text-button repair-email-link" onClick={() => { setChange('email'); setRepairing(true); setNewEmail(''); setPassword(''); setRepeat(''); setError(''); }}>Hai usato un’email fittizia? Correggila</button></>}
       {repairing && <p className="account-demo-note">Email attuale: <strong>{email}</strong>. Non creare un secondo account: correggi questo.</p>}
       {demo && <p className="account-demo-note">Modalità demo: usa dati di prova.</p>}
       {pendingEmail && <p className="success">Hai un cambio email in attesa di conferma verso {pendingEmail}.</p>}
-      <label>Nuova email<input type="email" required autoComplete="email" maxLength={254} value={newEmail} onChange={e => setNewEmail(e.target.value)} /></label>
-      {!repairing && <><label>Nuova password <small>(opzionale)</small><div className="password-input"><input type={visible ? 'text' : 'password'} autoComplete="new-password" minLength={8} value={password} onChange={e => setPassword(e.target.value)} placeholder="Lascia vuoto per mantenere quella attuale" /><button type="button" aria-label={visible ? 'Nascondi nuova password' : 'Mostra nuova password'} onClick={() => setVisible(!visible)}>{visible ? <EyeOff size={18} /> : <Eye size={18} />}</button></div></label>
+      {change === 'email' && <label>Nuova email<input type="email" required autoComplete="email" maxLength={254} value={newEmail} onChange={e => setNewEmail(e.target.value)} /></label>}
+      {change === 'password' && <><label>Nuova password<div className="password-input"><input type={visible ? 'text' : 'password'} autoComplete="new-password" required minLength={8} value={password} onChange={e => setPassword(e.target.value)} placeholder="Almeno 8 caratteri" /><button type="button" aria-label={visible ? 'Nascondi nuova password' : 'Mostra nuova password'} onClick={() => setVisible(!visible)}>{visible ? <EyeOff size={18} /> : <Eye size={18} />}</button></div></label>
       <label>Conferma nuova password<input type={visible ? 'text' : 'password'} autoComplete="new-password" required={Boolean(password)} value={repeat} onChange={e => setRepeat(e.target.value)} /></label></>}
       <label>Password attuale<input type="password" required autoComplete="current-password" value={current} onChange={e => setCurrent(e.target.value)} /></label>
       {error && <p className="error" role="alert">{error}</p>}

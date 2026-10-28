@@ -19,8 +19,7 @@ test('credenziali: conferma finale, annullamento, password attuale e email in at
   await page.getByRole('button',{name:'Modifica email e password'}).click();
   const dialog=page.getByRole('dialog');
   await dialog.getByLabel('Nuova email',{exact:true}).fill('new@example.test');
-  await dialog.getByLabel('Nuova password (opzionale)',{exact:true}).fill('NewPassword123!');
-  await dialog.getByLabel('Conferma nuova password',{exact:true}).fill('NewPassword123!');
+  await expect(dialog.getByLabel('Nuova password',{exact:true})).toHaveCount(0);
   await dialog.getByLabel('Password attuale',{exact:true}).fill('WrongPassword');
   await dialog.getByRole('button',{name:'Conferma modifiche'}).click();
   await expect(dialog.getByRole('heading',{name:'Vuoi davvero aggiornare le credenziali?'})).toBeVisible();
@@ -36,8 +35,8 @@ test('credenziali: conferma finale, annullamento, password attuale e email in at
   await dialog.getByRole('button',{name:'Conferma modifiche'}).click();
   await dialog.getByRole('button',{name:'Sì, aggiorna credenziali'}).click();
   await expect(dialog.getByRole('heading',{name:'Modifiche registrate.'})).toBeVisible();
-  await expect(dialog).toContainText('in attesa di conferma');await expect(dialog).toContainText('password è stata aggiornata');
-  expect(mock.state.updates).toHaveLength(1);expect(mock.state.updates[0]).toMatchObject({email:'new@example.test',password:'NewPassword123!',current_password:'CurrentPassword123!'});
+  await expect(dialog).toContainText('in attesa di conferma');await expect(dialog).not.toContainText('password è stata aggiornata');
+  expect(mock.state.updates).toHaveLength(1);expect(mock.state.updates[0]).toMatchObject({email:'new@example.test'});expect(mock.state.updates[0]).not.toHaveProperty('password');
   expect(mock.state.user.email).toBe('diego@example.test');
   await page.screenshot({path:`test-results/account-success-${info.project.name}.png`,fullPage:true});
 });
@@ -46,7 +45,10 @@ test('credenziali: password nuove discordanti e aggiornamento della sola passwor
   const mock=await mockAccount(page);await mock.login();
   await page.getByRole('button',{name:'Il mio profilo',exact:true}).click();await page.getByRole('button',{name:'Modifica email e password'}).click();
   const dialog=page.getByRole('dialog');
-  await dialog.getByLabel('Nuova password (opzionale)',{exact:true}).fill('NewPassword123!');await dialog.getByLabel('Conferma nuova password',{exact:true}).fill('DifferentPassword');await dialog.getByLabel('Password attuale',{exact:true}).fill(mock.state.password);
+  await dialog.getByLabel('Nuova email',{exact:true}).fill('discarded@example.test');
+  await dialog.getByRole('radio',{name:'Password',exact:true}).check();
+  await expect(dialog.getByLabel('Nuova email',{exact:true})).toHaveCount(0);
+  await dialog.getByLabel('Nuova password',{exact:true}).fill('NewPassword123!');await dialog.getByLabel('Conferma nuova password',{exact:true}).fill('DifferentPassword');await dialog.getByLabel('Password attuale',{exact:true}).fill(mock.state.password);
   await dialog.getByRole('button',{name:'Conferma modifiche'}).click();await expect(dialog.getByRole('alert')).toContainText('non coincidono');expect(mock.state.updates).toHaveLength(0);
   await dialog.getByLabel('Conferma nuova password',{exact:true}).fill('NewPassword123!');await dialog.getByRole('button',{name:'Conferma modifiche'}).click();await dialog.getByRole('button',{name:'Sì, aggiorna credenziali'}).click();
   await expect(dialog).toContainText('password è stata aggiornata');expect(mock.state.updates[0]).not.toHaveProperty('email');
@@ -57,11 +59,13 @@ test('correzione email fittizia conserva il profilo e richiede password e verifi
   await page.getByRole('button',{name:'Il mio profilo',exact:true}).click();
   await page.getByRole('button',{name:'Modifica email e password'}).click();
   const dialog=page.getByRole('dialog');
+  await dialog.getByRole('radio',{name:'Password',exact:true}).check();
+  await dialog.getByLabel('Nuova password',{exact:true}).fill('DiscardedPassword123!');
   await dialog.getByRole('button',{name:'Hai usato un’email fittizia? Correggila'}).click();
   await expect(dialog.getByRole('heading',{name:'Correggi la tua email.'})).toBeVisible();
   await expect(dialog).toContainText('Mantieni lo stesso profilo');
   await expect(dialog.getByLabel('Nuova email',{exact:true})).toHaveValue('');
-  await expect(dialog.getByLabel('Nuova password (opzionale)',{exact:true})).toHaveCount(0);
+  await expect(dialog.getByLabel('Nuova password',{exact:true})).toHaveCount(0);
   await dialog.getByLabel('Nuova email',{exact:true}).fill('real@example.test');
   await dialog.getByLabel('Password attuale',{exact:true}).fill(mock.state.password);
   await dialog.getByRole('button',{name:'Conferma modifiche'}).click();expect(mock.state.updates).toHaveLength(0);
