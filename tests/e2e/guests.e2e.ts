@@ -13,6 +13,7 @@ for (const scenario of [
   for(const name of scenario.slots){await dialog.getByRole('combobox').first().fill(name);await expect(dialog.getByRole('option',{name,exact:true})).toHaveCount(1);await dialog.getByRole('option',{name,exact:true}).click();}
   await expect(dialog.getByRole('combobox',{name:'MVP della partita'}).locator('option')).not.toContainText(['Ospite']);
   await dialog.getByRole('combobox',{name:'MVP della partita'}).selectOption('diego');
+  await dialog.getByRole('spinbutton',{name:'Gol Rossi'}).fill('10');
   await dialog.getByRole('button',{name:'Aggiungi la partita'}).click();await expect(dialog).not.toBeVisible();
   await expect(page.locator('.ranking-row').filter({hasText:'Ospite'})).toHaveCount(0);
   await page.locator('.recent-section .match-card').first().click();

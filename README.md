@@ -160,3 +160,15 @@ Nei doppi, un giocatore che ricopre il ruolo opposto a quello preferito riceve u
 La migrazione `202610280003_role_preference_snapshot.sql` è applicata al database remoto. Aggiunge `match_participants.preferred_role_at_match`, popolata una volta sulle partecipazioni esistenti con la preferenza del profilo presente al momento della migrazione. È una stima retroattiva, perché prima non si registravano i cambi di preferenza. Un trigger di inserimento legge la preferenza effettiva dal profilo lato server, anche se il client prova a specificarne un'altra. Il client continua a non poter modificare le partecipazioni. Cambiare la preferenza nel profilo influenza solo le partite future.
 
 Tutti i caricamenti delle partite includono il nuovo campo. Anche la demo congela la preferenza per ogni partecipazione. Nel dettaglio di una partita fuori ruolo si vede la preferenza salvata accanto al ruolo giocato. `supabase/tests/role_preference_snapshot.sql` verifica la preferenza server, il rifiuto delle modifiche allo storico, gli ospiti e i retry, annullando i dati di prova con `ROLLBACK`.
+
+## Relazioni e prossima partita (29 ottobre 2026)
+
+Il modulo di inserimento parte da **0–0**, anche quando viene precompilato da una proposta. Il pareggio continua a non essere registrabile: serve inserire il risultato effettivo prima di salvare.
+
+Nel profilo, accanto al miglior compagno, compare **Acerrimo nemico**: l'avversario registrato attivo contro cui si sono accumulate più sconfitte in carriera. Nei doppi una sconfitta conta contro ciascuno dei due avversari; gli ospiti e gli account rimossi sono esclusi. A parità di sconfitte prevalgono gli incontri contro, poi nome e ID. In assenza di sconfitte contro utenti attivi si mostra uno stato vuoto, senza inventare un rivale.
+
+L'aggancio **Suggerisci una partita** è nella parte alta della home. Le proposte usano tutti gli incontri disponibili, escludono ospiti e account rimossi e includono sempre il giocatore corrente. Con almeno quattro iscritti vengono proposti doppi; con due o tre, singoli; con un solo utente non si inventano partecipanti.
+
+Il suggerimento privilegia compagni con poche partite insieme, ruoli preferiti compatibili e una forza media delle squadre vicina, calcolata con il rating in carriera. Fra i dodici compagni meno abituali si cerca una coppia avversaria nell'intera rosa; il costo combina frequenza insieme (6 per partita fino a 10), ruoli non preferiti (12 ciascuno), differenza di forza media divisa per 10 e frequenza degli avversari (mezzo punto per incontro fino a 20 per avversario). Le alternative sono deterministiche e non richiedono servizi esterni. La proposta spiega i motivi e segnala quando le stime si basano su poche partite; non garantisce disponibilità o intesa personale.
+
+**Altra proposta** cambia combinazione. **Usa questa proposta** apre il normale inserimento con squadre e ruoli modificabili, punteggio 0–0 e nessun MVP preselezionato. Non registra partite automaticamente. Le funzionalità leggono i dati già esistenti e non richiedono migrazioni Supabase.

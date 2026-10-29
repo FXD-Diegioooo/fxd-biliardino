@@ -40,6 +40,7 @@ test('preferenza congelata nella partita e forza invariata dopo il cambio nel pr
     await dialog.getByRole('combobox').first().fill(name);await dialog.getByRole('option',{name,exact:true}).click();
   }
   await dialog.getByRole('combobox',{name:'MVP della partita'}).selectOption('diego');
+  await dialog.getByRole('spinbutton',{name:'Gol Rossi'}).fill('10');
   await dialog.getByRole('button',{name:'Aggiungi la partita'}).click();await expect(dialog).not.toBeVisible();
   await page.locator('.recent-section .match-card').first().click();
   await expect(page.getByRole('dialog').locator('.person-line').filter({hasText:'Diego Cogliati'})).toContainText('Portiere · preferenza: Attaccante');
