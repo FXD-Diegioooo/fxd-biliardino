@@ -34,8 +34,22 @@ function ClubApp() {
   const [recoveryUserId, setRecoveryUserId] = useState<string | null>(savedRecoveryUser), [demoEmail, setDemoEmail] = useState('diego@example.invalid');
   const [players, setPlayers] = useState<Player[]>([]), [matches, setMatches] = useState<Match[]>([]), [loading, setLoading] = useState(false), [loadedFor, setLoadedFor] = useState<string | null>(null), [dataError, setDataError] = useState(''), [reload, setReload] = useState(0);
   const [view, setView] = useState<View>('ranking'), [profileId, setProfileId] = useState<string | null>(null), [newMatch, setNewMatch] = useState(false), [detail, setDetail] = useState<Match | null>(null), [toast, setToast] = useState('');
+  const [adminUserId, setAdminUserId] = useState<string | null>(null), [developerUserId, setDeveloperUserId] = useState<string | null>(null), [editingMatch, setEditingMatch] = useState<Match | null>(null);
+  const isAdmin = Boolean(user && !demo && adminUserId === user.id);
+  const developerMode = isAdmin && developerUserId === user?.id;
   const [suggestion, setSuggestion] = useState<MatchSuggestion | undefined>();
   const [reaction, setReaction] = useState<{ id: string; outcome: 'win' | 'loss' } | null>(null);
+  useEffect(() => {
+    let live = true;
+    setAdminUserId(null); setDeveloperUserId(null); setEditingMatch(null);
+    if (supabase && user && !demo) {
+      const userId = user.id;
+      supabase.rpc('is_club_admin').then(({ data, error }) => {
+        if (live && !error && data === true) setAdminUserId(userId);
+      });
+    }
+    return () => { live = false; };
+  }, [user?.id, demo]);
   useEffect(() => {
     if (!reaction) return;
     const timer = setTimeout(() => setReaction(null), 3400);
@@ -77,7 +91,7 @@ function ClubApp() {
   function startDemo() { setDemoEmail('diego@example.invalid'); setDemo(true); setPlayers([...demoPlayers, ...guestPlayers].map(p => ({ ...p }))); setMatches(makeDemoMatches().map(match => ({ ...match, participants: match.participants.map(p => ({ ...p, preferred_role_at_match: demoPlayers.find(player => player.id === p.player_id)?.preferred_role || 'both' })) }))); setView('ranking'); setProfileId(null); }
   function navigate(next: View) { setView(next); if (next === 'profile') setProfileId(me?.id || null); window.scrollTo({ top: 0, behavior: 'smooth' }); }
   function openProfile(id: string) { setProfileId(id); setView('profile'); window.scrollTo({ top: 0, behavior: 'smooth' }); }
-  async function logout() { if (!demo && supabase) { const { error } = await supabase.auth.signOut(); if (error) { notify('Uscita non riuscita. Riprova.'); return; } } setDemo(false); setPlayers([]); setMatches([]); setUser(null); setSuggestion(undefined); setReaction(null); setDetail(null); setNewMatch(false); setView('ranking'); }
+  async function logout() { if (!demo && supabase) { const { error } = await supabase.auth.signOut(); if (error) { notify('Uscita non riuscita. Riprova.'); return; } } setDemo(false); setPlayers([]); setMatches([]); setUser(null); setAdminUserId(null); setDeveloperUserId(null); setEditingMatch(null); setSuggestion(undefined); setReaction(null); setDetail(null); setNewMatch(false); setView('ranking'); }
   function reactToMatch(input: MatchInput) {
     const participant = input.participants.find(p => p.player_id === me?.id);
     setReaction(participant ? { id: input.request_id, outcome: participant.side === winner(input) ? 'win' : 'loss' } : null);
@@ -117,6 +131,27 @@ function ClubApp() {
     clearRecoveryUser(); setRecoveryUserId(null); setRecovery(false);
     window.history.replaceState(null, '', window.location.pathname);
   }
+  async function editMatch(input: MatchInput) {
+    if (!developerMode || !editingMatch || !supabase) throw new Error('Modalità sviluppatore non disponibile.');
+    const validation = validateMatch(input); if (validation) throw new Error(validation);
+    const { data, error } = await supabase.rpc('admin_update_match', {
+      p_match_id: editingMatch.id, p_expected_revision: editingMatch.revision ?? 0,
+      p_red_score: input.red_score, p_blue_score: input.blue_score,
+      p_mvp_id: input.mvp_id, p_participants: input.participants,
+    });
+    if (error) throw new Error(error.message);
+    const updated = data as Match;
+    setMatches(current => current.map(m => m.id === updated.id ? updated : m));
+    setEditingMatch(null); setDetail(updated);
+    notify('Partita aggiornata. Statistiche e classifiche ricalcolate.');
+  }
+  async function deleteMatch() {
+    if (!developerMode || !detail || !supabase) throw new Error('Modalità sviluppatore non disponibile.');
+    const { error } = await supabase.rpc('admin_delete_match', { p_match_id: detail.id, p_expected_revision: detail.revision ?? 0 });
+    if (error) throw new Error(error.message);
+    setMatches(current => current.filter(m => m.id !== detail.id)); setDetail(null);
+    notify('Partita eliminata. Statistiche e classifiche ricalcolate.');
+  }
   async function report(match: Match, reason: string) {
     if (demo) { notify('Segnalazione simulata. Nella demo non vengono salvati dati online.'); return; }
     const { error } = await supabase!.rpc('report_match', { p_match_id: match.id, p_reason: reason.trim() });
@@ -127,7 +162,7 @@ function ClubApp() {
   if (loading || (!demo && user && loadedFor !== user.id && !dataError)) return <div className="loading-screen"><Brand /><LoaderCircle className="spin" /><p>Prepariamo il tavolo…</p></div>;
   if (dataError || !me) return <div className="loading-screen"><Brand /><CircleAlert size={32} /><h2>Il club non è ancora pronto.</h2><p>{dataError || 'Non è stato trovato il tuo profilo. Verifica di aver eseguito la configurazione del database.'}</p><button className="button primary" onClick={() => setReload(reload + 1)}>Riprova</button><button className="text-button" onClick={logout}>Torna all’accesso</button></div>;
   const profile = players.find(p => p.id === profileId) || me;
-  return <div className="app-shell">{demo && <div className="demo-banner"><span><span className="status-dot" /> Modalità demo <span className="demo-banner-detail">· Dati di esempio, nessun salvataggio online</span></span><button onClick={logout}>Esci dalla demo <ArrowRight size={13} /></button></div>}<header className="site-header"><button className="brand-button" onClick={() => navigate('ranking')} aria-label="Fuoricampo, vai alla classifica"><Brand /></button><nav aria-label="Menu principale" className="desktop-nav"><button className={view === 'ranking' ? 'active' : ''} onClick={() => navigate('ranking')}><Trophy size={17} /> Classifica</button><button className={view === 'matches' ? 'active' : ''} onClick={() => navigate('matches')}><CalendarDays size={17} /> Partite</button></nav><div className="header-actions"><button className="button primary add-header" onClick={() => setNewMatch(true)}><Plus size={18} /> Aggiungi partita</button><ThemeToggle /><button className="user-button" onClick={() => navigate('profile')} aria-label="Il mio profilo"><Avatar player={me} size="sm" /></button><button className="icon-button logout-button" onClick={logout} aria-label="Esci dal tuo account"><LogOut size={18} /></button></div></header><main className="main-content">{view === 'ranking' && <Leaderboard players={players} matches={matches} me={me} onProfile={openProfile} onMatch={setDetail} onHistory={() => navigate('matches')} onNew={() => setNewMatch(true)} onSuggested={suggestion => { setSuggestion(suggestion); setNewMatch(true); }} />}{view === 'matches' && <History players={players} matches={matches} onMatch={setDetail} onNew={() => setNewMatch(true)} />}{view === 'profile' && <Profile key={profile.id} player={profile} players={players} matches={matches} own={profile.id === me.id} onMatch={setDetail} onBack={() => navigate('ranking')} onUpdate={updateProfile} accountEmail={demo ? demoEmail : user?.email || ''} pendingEmail={demo ? undefined : pendingEmailAddress(user?.email, user?.new_email)} demo={demo} onCredentials={changeCredentials} />}</main><nav className="mobile-nav" aria-label="Menu mobile"><button className={view === 'ranking' ? 'active' : ''} onClick={() => navigate('ranking')}><Trophy size={21} /><span>Classifica</span></button><button className="mobile-add" onClick={() => setNewMatch(true)}><span><Plus size={23} /></span><span>Aggiungi</span></button><button className={view === 'matches' ? 'active' : ''} onClick={() => navigate('matches')}><CalendarDays size={21} /><span>Partite</span></button></nav>{newMatch && <NewMatch players={players} suggestion={suggestion} onClose={() => { setNewMatch(false); setSuggestion(undefined); }} onSave={saveMatch} />}{detail && <MatchDetail match={detail} players={players} onClose={() => setDetail(null)} onReport={report} />}{reaction && !newMatch && !detail && <MatchReaction key={reaction.id} outcome={reaction.outcome} />}{toast && <div className="toast" role="status"><CheckCircle2 size={19} />{toast}<button className="icon-button small" aria-label="Chiudi notifica" onClick={() => setToast('')}><X size={16} /></button></div>}</div>;
+  return <div className="app-shell">{developerMode && <div className="developer-mode-banner" role="status">Modalità sviluppatore attiva · Puoi gestire le partite</div>}{demo && <div className="demo-banner"><span><span className="status-dot" /> Modalità demo <span className="demo-banner-detail">· Dati di esempio, nessun salvataggio online</span></span><button onClick={logout}>Esci dalla demo <ArrowRight size={13} /></button></div>}<header className="site-header"><button className="brand-button" onClick={() => navigate('ranking')} aria-label="Fuoricampo, vai alla classifica"><Brand /></button><nav aria-label="Menu principale" className="desktop-nav"><button className={view === 'ranking' ? 'active' : ''} onClick={() => navigate('ranking')}><Trophy size={17} /> Classifica</button><button className={view === 'matches' ? 'active' : ''} onClick={() => navigate('matches')}><CalendarDays size={17} /> Partite</button></nav><div className="header-actions"><button className="button primary add-header" onClick={() => setNewMatch(true)}><Plus size={18} /> Aggiungi partita</button><ThemeToggle /><button className="user-button" onClick={() => navigate('profile')} aria-label="Il mio profilo"><Avatar player={me} size="sm" /></button><button className="icon-button logout-button" onClick={logout} aria-label="Esci dal tuo account"><LogOut size={18} /></button></div></header><main className="main-content">{view === 'ranking' && <Leaderboard players={players} matches={matches} me={me} onProfile={openProfile} onMatch={setDetail} onHistory={() => navigate('matches')} onNew={() => setNewMatch(true)} onSuggested={suggestion => { setSuggestion(suggestion); setNewMatch(true); }} />}{view === 'matches' && <History players={players} matches={matches} onMatch={setDetail} onNew={() => setNewMatch(true)} />}{view === 'profile' && <Profile key={profile.id} player={profile} players={players} matches={matches} own={profile.id === me.id} onMatch={setDetail} onBack={() => navigate('ranking')} onUpdate={updateProfile} accountEmail={demo ? demoEmail : user?.email || ''} pendingEmail={demo ? undefined : pendingEmailAddress(user?.email, user?.new_email)} demo={demo} onCredentials={changeCredentials} isAdmin={isAdmin} developerMode={developerMode} onDeveloperMode={enabled => { setDeveloperUserId(enabled && user ? user.id : null); setEditingMatch(null); }} />}</main><nav className="mobile-nav" aria-label="Menu mobile"><button className={view === 'ranking' ? 'active' : ''} onClick={() => navigate('ranking')}><Trophy size={21} /><span>Classifica</span></button><button className="mobile-add" onClick={() => setNewMatch(true)}><span><Plus size={23} /></span><span>Aggiungi</span></button><button className={view === 'matches' ? 'active' : ''} onClick={() => navigate('matches')}><CalendarDays size={21} /><span>Partite</span></button></nav>{newMatch && <NewMatch players={players} suggestion={suggestion} onClose={() => { setNewMatch(false); setSuggestion(undefined); }} onSave={saveMatch} />}{editingMatch && developerMode && <NewMatch key={editingMatch.id} players={players} initialMatch={editingMatch} onClose={saved => { setEditingMatch(null); if (!saved) setDetail(editingMatch); }} onSave={editMatch} />}{detail && <MatchDetail key={detail.id} match={detail} players={players} onClose={() => setDetail(null)} onReport={report} onEdit={developerMode ? () => { setEditingMatch(detail); setDetail(null); } : undefined} onDelete={developerMode ? deleteMatch : undefined} />}{reaction && !newMatch && !detail && <MatchReaction key={reaction.id} outcome={reaction.outcome} />}{toast && <div className="toast" role="status"><CheckCircle2 size={19} />{toast}<button className="icon-button small" aria-label="Chiudi notifica" onClick={() => setToast('')}><X size={16} /></button></div>}</div>;
 }
 function History({ players, matches, onMatch, onNew }: { players: Player[]; matches: Match[]; onMatch: (match: Match) => void; onNew: () => void }) {
   const [search, setSearch] = useState(''), [format, setFormat] = useState('all'), [period, setPeriod] = useState('all'), [limit, setLimit] = useState(12);

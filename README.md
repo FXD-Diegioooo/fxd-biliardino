@@ -32,7 +32,17 @@ Lo schema iniziale è in `supabase/migrations/202610260001_club.sql`. È stato a
 - `segnalazioni_partite`: vista amministrativa con nomi, squadre, gol, motivo e stato.
 - Bucket `avatars`: foto JPG/PNG/WebP fino a 2 MB; ogni utente può caricare e rimuovere solo i propri file. Le foto hanno URL pubblico.
 
-Le tabelle hanno Row Level Security. Gli utenti non possono inserire direttamente partite e segnalazioni, né modificare/eliminare partite. Le funzioni `add_match` e `report_match` verificano l'identità autenticata, validano i dati e salvano atomicamente. Un account eliminato o bloccato non può continuare a leggere le tabelle tramite un vecchio token. I giocatori rimossi sono anonimizzati e le loro partite storiche rimangono consistenti.
+Le tabelle hanno Row Level Security. Gli utenti non possono inserire direttamente partite e segnalazioni, né modificare/eliminare partite dalle tabelle. Le funzioni `add_match` e `report_match` verificano l'identità autenticata, validano i dati e salvano atomicamente. Le correzioni amministrative passano dalle funzioni riservate descritte sotto. Un account eliminato o bloccato non può continuare a leggere le tabelle tramite un vecchio token. I giocatori rimossi sono anonimizzati e le loro partite storiche rimangono consistenti.
+
+### Modalità sviluppatore e gestione partite
+
+La migrazione `supabase/migrations/202611170001_match_administration.sql` aggiunge la gestione amministrativa ed è stata applicata al progetto remoto il 17 novembre 2026. Non eseguirla nuovamente sullo stesso schema. Il nuovo frontend va pubblicato separatamente. Richiede che esista già un unico account con email `cogliati.diego001@gmail.com`: salva il suo UID Auth nella tabella protetta `club_admins`. L'associazione segue quell'identità anche se cambia email; una nuova registrazione con lo stesso indirizzo non eredita il ruolo. Gli utenti dell'app non possono leggere o modificare `club_admins` e i metadati del profilo non assegnano permessi. Per revocare il ruolo, rimuovere l'UID da questa tabella tramite un accesso amministrativo a Supabase; il blocco o la rimozione dell'account impediscono immediatamente le operazioni.
+
+Nel proprio **Profilo**, solo l'amministratore vede lo switch **Modalità sviluppatore**, disattivato a ogni accesso o ricaricamento. Quando è attivo, aprendo una partita da qualsiasi schermata compaiono **Modifica partita** ed **Elimina partita**. È possibile correggere formato, squadre, ruoli, gol e MVP, oppure rimuovere l'MVP. Il salvataggio aggiorna immediatamente storico, statistiche e classifiche. L'eliminazione richiede una seconda conferma e rimuove anche partecipazioni e segnalazioni collegate.
+
+Le RPC `is_club_admin`, `admin_update_match` e `admin_delete_match` verificano l'identità direttamente nel database. Lo switch è una protezione d'interfaccia contro azioni involontarie; l'autorizzazione effettiva è sempre server. Le operazioni sono atomiche e controllano `matches.revision`: un editor obsoleto deve ricaricare la pagina anziché sovrascrivere una correzione successiva. Data, autore e identificativo originale restano invariati. Ogni partecipante già presente mantiene la preferenza di ruolo storica; per i nuovi partecipanti viene fotografata la preferenza corrente dal server. Le segnalazioni ancora in attesa passano a `reviewed` dopo una correzione.
+
+`supabase/tests/match_administration.sql` verifica permessi, tentativi di autoassegnazione del ruolo, validazione, preferenze storiche, conflitti di revisione, account bloccati e cancellazione con dati collegati. Termina con `ROLLBACK`. I test browser desktop/mobile sono in `tests/e2e/admin.e2e.ts` e usano risposte Supabase simulate.
 
 ### Consultare le segnalazioni
 
